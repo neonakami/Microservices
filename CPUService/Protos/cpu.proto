@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option csharp_namespace = "CPUMiroservice.Protos";
+
+service GrpcCPU {
+	rpc GetAllCPUs (GetAllRequest) returns (CPUResponse);
+}
+
+message GetAllRequest {}
+
+message GrpcCPUModel {
+	int32 CPUId = 1;
+	string name = 2;
+	string company = 3;
+	string model = 4;
+	float frequency = 5;
+	float cache = 6;
+	int32 technicalProcess = 7;
+	int32 numberOfCores = 8;
+	int32 numebrOfThreads = 9;
+}
+
+message CPUResponse {
+	repeated GrpcCPUModel CPU = 1;
+}

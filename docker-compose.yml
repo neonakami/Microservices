@@ -1,0 +1,76 @@
+﻿version: "3.9"
+
+services:
+    rabbitmq:
+        image: rabbitmq:3.9-management
+        container_name: 'rabbitmq'
+        ports:
+            - 5672:5672
+            - 15672:15672
+        expose:
+            - 5672
+            - 15672
+        environment:
+            - RABBITMQ_DEFAULT_USER=guest
+            - RABBITMQ_DEFAULT_PASS=guest
+
+    cpu.service:
+        image: cpu.service
+        container_name: cpu
+        build:
+            context: .
+            dockerfile: CPUService/Dockerfile
+        command: ["./wait-for.sh", "rabbitmq:5672", "--", "dotnet", "CPU.dll"]
+        environment:
+            - ASPNETCORE_ENVIRONMENT=Development
+            - ASPNETCORE_HTTP_PORT=https://+:8080
+            - ASPNETCORE_URLS=http://+:5126
+            - "ConnectionStrings:PostgreSQL=Host=db;Port=5432;Database=CPU;Username=postgres;Password=admin"
+            - RabbitMQHost=rabbitmq
+            - RabbitMQPort=5672
+        depends_on:
+            - db
+            - rabbitmq
+            - commands.service
+        ports:
+            - "8080:5126"
+
+    commands.service:
+        image: commands.service
+        container_name: commandsservice
+        build:
+            context: .
+            dockerfile: CommandsService/Dockerfile
+        command: ["./wait-for.sh", "rabbitmq:5672", "--", "dotnet", "CommandsService.dll"]
+
+        environment:
+            - ASPNETCORE_ENVIRONMENT=Development
+            - ASPNETCORE_HTTP_PORT=https://+:8081
+            - ASPNETCORE_URLS=http://+:5227
+            - "ConnectionStrings:PostgreSQL=Host=db;Port=5432;Database=Commands;Username=postgres;Password=admin"
+            - RabbitMQHost=rabbitmq
+            - RabbitMQPort=5672
+        ports:
+            - "8081:5227"
+        depends_on:
+            - db
+            - rabbitmq
+
+    db:
+        image: postgres:15.1-alpine
+        restart: always
+        container_name: db
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=admin
+        volumes:
+            -  db-data:/var/lib/postgresql/data
+
+networks:
+    default:
+        driver: bridge
+
+volumes:
+    db-data:
